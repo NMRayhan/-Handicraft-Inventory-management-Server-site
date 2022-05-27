@@ -17,7 +17,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   const ProductCollection = client.db("HandicraftDB").collection("Products");
-  const OrdersCollection = client.db("HandicraftDB").collection("Orders")
+  const OrdersCollection = client.db("HandicraftDB").collection("Orders");
+  const UserQuestionCollections = client.db("HandicraftDB").collection("ContactUs")
   try {
     client.connect();
 
@@ -28,19 +29,26 @@ async function run() {
     });
 
     //get one product
-    app.get('/purchase/:_id', async(req, res)=>{
-        const id = req.params._id
-        const query = {_id: ObjectId(id)}
-        const result = await ProductCollection.findOne(query)
-        res.send(result)
-    })
+    app.get("/purchase/:_id", async (req, res) => {
+      const id = req.params._id;
+      const query = { _id: ObjectId(id) };
+      const result = await ProductCollection.findOne(query);
+      res.send(result);
+    });
 
-    // submit Customer order 
-    app.post('/purchase', async(req, res)=>{
-        const Order = req.body
-        const result = await OrdersCollection.insertOne(Order)
-        res.send(result);
-    })
+    // submit Customer order
+    app.post("/purchase", async (req, res) => {
+      const Order = req.body;
+      const result = await OrdersCollection.insertOne(Order);
+      res.send(result);
+    });
+
+    //submit ask from contact us page
+    app.post("/ask", async (req, res) => {
+      const Order = req.body;
+      const result = await UserQuestionCollections.insertOne(Order);
+      res.send(result);
+    });
   } finally {
     // client.close()
   }
