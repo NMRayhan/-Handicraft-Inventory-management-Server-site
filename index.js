@@ -38,8 +38,31 @@ async function run() {
     .db("HandicraftDB")
     .collection("ContactUs");
   const UserReviewCollections = client.db("HandicraftDB").collection("Reviews");
+  const UserCollections = client.db("HandicraftDB").collection("Users");
   try {
     client.connect();
+
+    // user update
+    app.put("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: user,
+      };
+      const result = await UserCollections.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      const token = jwt.sign(
+        { email: email },
+        process.env.ACCESS_TOKEN,
+        { expiresIn: "12h" }
+      );
+      return res.send({ result, token });
+    });
 
     //app product showing
     app.get("/products", async (req, res) => {
