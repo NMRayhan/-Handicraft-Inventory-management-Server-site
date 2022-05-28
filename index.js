@@ -19,6 +19,7 @@ async function run() {
   const ProductCollection = client.db("HandicraftDB").collection("Products");
   const OrdersCollection = client.db("HandicraftDB").collection("Orders");
   const UserQuestionCollections = client.db("HandicraftDB").collection("ContactUs")
+  const UserReviewCollections = client.db("HandicraftDB").collection("Reviews")
   try {
     client.connect();
 
@@ -43,12 +44,37 @@ async function run() {
       res.send(result);
     });
 
+    // customer orders showing Dashboard for user 
+    app.get("/orders/:email", async(req, res)=>{
+      const email = req.params.email
+      const query = {customer_email: email}
+      const result = await OrdersCollection.find(query).toArray()
+      res.send(result)
+    })
+
     //submit ask from contact us page
     app.post("/ask", async (req, res) => {
       const Order = req.body;
       const result = await UserQuestionCollections.insertOne(Order);
       res.send(result);
     });
+
+    // submit Customer Review
+    app.post("/review", async (req, res) => {
+      const Order = req.body;
+      const result = await UserReviewCollections.insertOne(Order);
+      res.send(result);
+    });
+
+    // get customer review filter by user
+    app.get('/review/:email', async(req, res)=>{
+      const email = req.params.email;
+      const filter = {reviewEmail: email}
+      const result = await UserReviewCollections.find(filter).toArray()
+      res.send(result);
+    })
+
+
   } finally {
     // client.close()
   }
