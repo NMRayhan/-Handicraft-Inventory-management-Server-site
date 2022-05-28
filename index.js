@@ -20,11 +20,12 @@ const verifyJWT = (req, res, next) => {
   const authHeaders = req.headers.authorization;
   const accessToken = authHeaders.split(" ")[1];
   if (!authHeaders) {
-    res.status(401).send({ message: "unAuthorize" });
+    return res.status(401).send({ message: "unAuthorize" });
   }
   jwt.verify(accessToken, process.env.ACCESS_TOKEN, (error, decode) => {
     if (error) {
-      res.status(403).send({ message: "forbidden" });
+      console.log(error);
+      return res.status(403).send({ message: "forbidden" });
     }
     req.decode = decode;
     next();
@@ -42,6 +43,48 @@ async function run() {
   try {
     client.connect();
 
+    // make user Admin
+    app.put("/user/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const requester = req.decode.email;
+      const requesterAccount = await UserCollections.findOne({
+        email: requester,
+      });
+      if (requesterAccount.role === "admin") {
+        const filter = { email: email };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await UserCollections.updateOne(filter, updatedDoc);
+        return res.send(result);
+      }else{
+        return res.status(403).send({message : "Forbidden User"})
+      }
+    });
+
+    // remove user Admin
+    app.put("/user/removeAdmin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updatedDoc = {
+        $set: {
+          role: "normal",
+        },
+      };
+      const result = await UserCollections.updateOne(filter, updatedDoc);
+
+      return res.send(result);
+    });
+
+    app.get('/admin/:email', async(req, res)=>{
+      const email = req.params.email;
+      const user = await UserCollections.findOne({email: email})
+      const isAdmin = user.role === 'admin'
+      res.send({admin: isAdmin})
+    })
+
     // user update
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
@@ -56,12 +99,16 @@ async function run() {
         updatedDoc,
         options
       );
-      const token = jwt.sign(
-        { email: email },
-        process.env.ACCESS_TOKEN,
-        { expiresIn: "12h" }
-      );
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+        expiresIn: "12h",
+      });
       return res.send({ result, token });
+    });
+
+    // all user
+    app.get("/users", verifyJWT, async (req, res) => {
+      const result = await UserCollections.find().toArray();
+      res.send(result);
     });
 
     //app product showing
@@ -120,8 +167,7 @@ async function run() {
 
     //get all review for home page
     app.get("/review", async (req, res) => {
-      const result = await UserReviewCollections.find().toArray();
-      // .limit(3)
+      const result = await UserReviewCollections.find().limit(6).toArray();
       res.send(result);
     });
 
@@ -134,7 +180,7 @@ async function run() {
     });
 
     //delete user review by user
-    app.put("/review/:id", async (req, res) => {
+    app.delete("/review/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await UserReviewCollections.deleteOne(filter);
