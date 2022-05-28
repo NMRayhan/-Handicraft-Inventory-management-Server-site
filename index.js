@@ -1,4 +1,5 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -15,11 +16,28 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+const verifyJWT = (req, res, next) => {
+  const authHeaders = req.headers.authorization;
+  const accessToken = authHeaders.split(" ")[1];
+  if (!authHeaders) {
+    res.status(401).send({ message: "unAuthorize" });
+  }
+  jwt.verify(accessToken, process.env.ACCESS_TOKEN, (error, decode) => {
+    if (error) {
+      res.status(403).send({ message: "forbidden" });
+    }
+    req.decode = decode;
+    next();
+  });
+};
+
 async function run() {
   const ProductCollection = client.db("HandicraftDB").collection("Products");
   const OrdersCollection = client.db("HandicraftDB").collection("Orders");
-  const UserQuestionCollections = client.db("HandicraftDB").collection("ContactUs")
-  const UserReviewCollections = client.db("HandicraftDB").collection("Reviews")
+  const UserQuestionCollections = client
+    .db("HandicraftDB")
+    .collection("ContactUs");
+  const UserReviewCollections = client.db("HandicraftDB").collection("Reviews");
   try {
     client.connect();
 
@@ -40,17 +58,28 @@ async function run() {
     // submit Customer order
     app.post("/purchase", async (req, res) => {
       const Order = req.body;
+      const quantity = parseInt(Order.quantity);
+      const id = Order.productId;
+      const filter = { _id: ObjectId(id) };
+      const Options = { upsert: true };
+      const productCursor = await ProductCollection.findOne(filter);
+      const newStock = productCursor.stock - quantity;
+      const updatedProduct = {
+        $set: { stock: newStock },
+      };
+      await ProductCollection.updateOne(filter, updatedProduct, Options);
+
       const result = await OrdersCollection.insertOne(Order);
       res.send(result);
     });
 
-    // customer orders showing Dashboard for user 
-    app.get("/orders/:email", async(req, res)=>{
-      const email = req.params.email
-      const query = {customer_email: email}
-      const result = await OrdersCollection.find(query).toArray()
-      res.send(result)
-    })
+    // customer orders showing Dashboard for user
+    app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { customer_email: email };
+      const result = await OrdersCollection.find(query).toArray();
+      res.send(result);
+    });
 
     //submit ask from contact us page
     app.post("/ask", async (req, res) => {
@@ -66,15 +95,28 @@ async function run() {
       res.send(result);
     });
 
-    // get customer review filter by user
-    app.get('/review/:email', async(req, res)=>{
-      const email = req.params.email;
-      const filter = {reviewEmail: email}
-      const result = await UserReviewCollections.find(filter).toArray()
+    //get all review for home page
+    app.get("/review", async (req, res) => {
+      const result = await UserReviewCollections.find().toArray();
+      // .limit(3)
       res.send(result);
-    })
+    });
 
+    // get customer review filter by user
+    app.get("/review/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { reviewEmail: email };
+      const result = await UserReviewCollections.find(filter).toArray();
+      res.send(result);
+    });
 
+    //delete user review by user
+    app.put("/review/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await UserReviewCollections.deleteOne(filter);
+      res.send(result);
+    });
   } finally {
     // client.close()
   }
