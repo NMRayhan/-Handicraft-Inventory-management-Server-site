@@ -22,12 +22,12 @@ const verifyJWT = (req, res, next) => {
   if (!authHeaders) {
     return res.status(401).send({ message: "unAuthorize" });
   }
-  jwt.verify(accessToken, process.env.ACCESS_TOKEN, (error, decode) => {
+  jwt.verify(accessToken, process.env.ACCESS_TOKEN, (error, decoded) => {
     if (error) {
       console.log(error);
       return res.status(403).send({ message: "forbidden" });
     }
-    req.decode = decode;
+    req.decoded = decoded;
     next();
   });
 };
@@ -44,28 +44,30 @@ async function run() {
     client.connect();
 
     // make user Admin
-    app.put("/user/admin/:email", verifyJWT, async (req, res) => {
+    app.put("/user/admin/:email", async (req, res) => {
+      //verifyJWT
       const email = req.params.email;
-      const requester = req.decode.email;
-      const requesterAccount = await UserCollections.findOne({
-        email: requester,
-      });
-      if (requesterAccount.role === "admin") {
-        const filter = { email: email };
-        const updatedDoc = {
-          $set: {
-            role: "admin",
-          },
-        };
-        const result = await UserCollections.updateOne(filter, updatedDoc);
-        return res.send(result);
-      }else{
-        return res.status(403).send({message : "Forbidden User"})
-      }
+      // const requester = req.decoded.email;
+      // const requesterAccount = await UserCollections.findOne({
+      //   email: requester,
+      // });
+      // if (requesterAccount.role === "admin") {
+      const filter = { email: email };
+      const updatedDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await UserCollections.updateOne(filter, updatedDoc);
+      return res.send(result);
+      // } else {
+      //   return res.status(403).send({ message: "Forbidden User" });
+      // }
     });
 
     // remove user Admin
-    app.put("/user/removeAdmin/:email", verifyJWT, async (req, res) => {
+    app.put("/user/removeAdmin/:email", async (req, res) => {
+      //verifyJWT
       const email = req.params.email;
       const filter = { email: email };
       const updatedDoc = {
@@ -74,16 +76,16 @@ async function run() {
         },
       };
       const result = await UserCollections.updateOne(filter, updatedDoc);
-
-      return res.send(result);
+      res.send(result);
     });
 
-    app.get('/admin/:email', async(req, res)=>{
+    app.get("/admin/:email", async (req, res) => {
+      //verifyJWT
       const email = req.params.email;
-      const user = await UserCollections.findOne({email: email})
-      const isAdmin = user.role === 'admin'
-      res.send({admin: isAdmin})
-    })
+      const user = await UserCollections.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
+    });
 
     // user update
     app.put("/user/:email", async (req, res) => {
@@ -102,17 +104,23 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
         expiresIn: "12h",
       });
-      return res.send({ result, token });
+      res.send({ result, token });
     });
 
     // all user
-    app.get("/users", verifyJWT, async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await UserCollections.find().toArray();
       res.send(result);
     });
 
+    //get all order
+    app.get("/orders/:email", async (req, res) => {
+      const result = await OrdersCollection.find().toArray();
+      res.send(result);
+    });
+
     //app product showing
-    app.get("/products", async (req, res) => {
+    app.get("/products/:email", async (req, res) => {
       const products = await ProductCollection.find({}).toArray();
       res.send(products);
     });
@@ -180,7 +188,8 @@ async function run() {
     });
 
     //delete user review by user
-    app.delete("/review/:id", verifyJWT, async (req, res) => {
+    app.delete("/review/:id", async (req, res) => {
+      //verifyJWT
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await UserReviewCollections.deleteOne(filter);
@@ -195,7 +204,7 @@ run().catch(console.dir);
 
 //testing
 app.get("/", (req, res) => {
-  res.send("Hello from Server");
+  res.send("Hello from Root URL of Server");
 });
 
 app.listen(port, () => {
