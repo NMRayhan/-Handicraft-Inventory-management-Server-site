@@ -44,8 +44,7 @@ async function run() {
     client.connect();
 
     // make user Admin
-    app.put("/user/admin/:email", async (req, res) => {
-      //verifyJWT
+    app.put("/user/admin/:email", async (req, res) => {   //verifyJWT
       const email = req.params.email;
       // const requester = req.decoded.email;
       // const requesterAccount = await UserCollections.findOne({
@@ -170,6 +169,15 @@ async function run() {
       const result = await OrdersCollection.insertOne(Order);
       res.send(result);
     });
+
+    //order Cancel by user
+    app.delete('/orderCancel/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id : ObjectId(id)}
+      const result = await OrdersCollection.deleteOne(query)
+      res.send(result)
+
+    })
 
     //submit ask from contact us page
     app.post("/ask", async (req, res) => {
