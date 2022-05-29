@@ -107,19 +107,39 @@ async function run() {
       res.send({ result, token });
     });
 
+    app.post("/addProduct", async (req, res) => {
+      const product = req.body;
+      const result = await ProductCollection.insertOne(product);
+      res.send(result);
+    });
+
     // all user
     app.get("/users", async (req, res) => {
       const result = await UserCollections.find().toArray();
       res.send(result);
     });
 
-    //get all order
+    // customer orders showing Dashboard for user
     app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { customer_email: email };
+      const result = await OrdersCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //get all order by admin
+    app.get("/allOrders", async (req, res) => {
       const result = await OrdersCollection.find().toArray();
       res.send(result);
     });
 
     //app product showing
+    app.get("/products", async (req, res) => {
+      const products = await ProductCollection.find({}).toArray();
+      res.send(products);
+    });
+
+    //app product showing by Admin Panel
     app.get("/products/:email", async (req, res) => {
       const products = await ProductCollection.find({}).toArray();
       res.send(products);
@@ -148,14 +168,6 @@ async function run() {
       await ProductCollection.updateOne(filter, updatedProduct, Options);
 
       const result = await OrdersCollection.insertOne(Order);
-      res.send(result);
-    });
-
-    // customer orders showing Dashboard for user
-    app.get("/orders/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { customer_email: email };
-      const result = await OrdersCollection.find(query).toArray();
       res.send(result);
     });
 
