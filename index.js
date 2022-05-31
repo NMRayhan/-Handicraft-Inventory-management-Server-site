@@ -44,7 +44,8 @@ async function run() {
     client.connect();
 
     // make user Admin
-    app.put("/user/admin/:email", async (req, res) => {   //verifyJWT
+    app.put("/user/admin/:email", async (req, res) => {
+      //verifyJWT
       const email = req.params.email;
       // const requester = req.decoded.email;
       // const requesterAccount = await UserCollections.findOne({
@@ -171,13 +172,12 @@ async function run() {
     });
 
     //order Cancel by user
-    app.delete('/orderCancel/:id', async(req, res)=>{
+    app.delete("/orderCancel/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id : ObjectId(id)}
-      const result = await OrdersCollection.deleteOne(query)
-      res.send(result)
-
-    })
+      const query = { _id: ObjectId(id) };
+      const result = await OrdersCollection.deleteOne(query);
+      res.send(result);
+    });
 
     //submit ask from contact us page
     app.post("/ask", async (req, res) => {
@@ -213,6 +213,14 @@ async function run() {
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const result = await UserReviewCollections.deleteOne(filter);
+      res.send(result);
+    });
+
+    // delete product by user
+    app.delete("/delete/:product_id", async (req, res) => {
+      const id = req.params.product_id;
+      const filter = { _id: ObjectId(id) };
+      const result = await ProductCollection.deleteOne(filter);
       res.send(result);
     });
   } finally {
